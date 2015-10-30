@@ -6,7 +6,7 @@ function [G, x, b] = digg_graph(DIGG_DIR, id, directed, pinitial, pend)
 %                   voter_id.mat, and story_id.mat files are located.
 %       id:         ID of the Digg story to consider as signal on the 
 %                   graph. The ID is an integer between 1 and 97.
-%       directed:   0 (zero) (default) or 1 (one): assemble and undirected 
+%       directed:   0(default) or 1: assemble and undirected 
 %                   graph, or a directed graph, respectively. 
 %       pinitial:   A number between 0 and 1 encoding the percentage of
 %                   timesteps for the story to consider when determining 
@@ -31,8 +31,12 @@ function [G, x, b] = digg_graph(DIGG_DIR, id, directed, pinitial, pend)
 %                   voters observed after the information has been diffused
 %
 %   Example:
+%       home = getenv('HOME');
+%       DIGG_DIR = strcat(home, 'data/digg');
 %       [G, x, b] = digg_graph(DIGG_DIR, 1);
-%
+% 
+% Author: Rodrigo Pena (rodrigo.pena@epfl.ch)
+% Date: 30 Oct 2015
 
 %% Process input
 if nargin < 3 || isempty(directed) || (directed ~= 1 && directed ~= 0)
@@ -115,7 +119,7 @@ G.lap_type = 'combinatorial';
 try
     G = gsp_graph_default_plotting_parameters(G);
 catch
-    warning('GSPBOX not found. Could not set default plotting parameters.')
+    warning('GSPBox not found. Could not set default plotting parameters.')
 end
 
 %% Create the signals on the graph
