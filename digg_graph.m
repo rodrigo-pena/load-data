@@ -5,7 +5,7 @@ function [G, x, b] = digg_graph(DIGG_DIR, id, directed, pinitial, pend)
 %                   user_id.mat, friend_id.mat, vote_date.mat, 
 %                   voter_id.mat, and story_id.mat files are located.
 %       id:         ID of the Digg story to consider as signal on the 
-%                   graph. The ID is an integer between 1 and 97.
+%                   graph. The ID is an integer between 1 (default) and 97.
 %       directed:   0(default) or 1: assemble and undirected 
 %                   graph, or a directed graph, respectively. 
 %       pinitial:   A number between 0 and 1 encoding the percentage of
@@ -39,6 +39,10 @@ function [G, x, b] = digg_graph(DIGG_DIR, id, directed, pinitial, pend)
 % Date: 30 Oct 2015
 
 %% Process input
+if nargin < 2 || isempty(id) || (id < 1) || (id > 97)
+    id = 1;
+end
+
 if nargin < 3 || isempty(directed) || (directed ~= 1 && directed ~= 0)
     directed = 0;
 end
