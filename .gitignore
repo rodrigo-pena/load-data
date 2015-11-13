@@ -1,2 +1,4 @@
 *.csv
 *.m~
+.DS_Store
+/spectral-layout/figs
