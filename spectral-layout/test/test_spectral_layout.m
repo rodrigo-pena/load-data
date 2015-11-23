@@ -19,7 +19,7 @@ TOL = 1e-8;
 MAX_ITER = 1000;
 
 %% Create graph
-G = gsp_logo();
+G = gsp_minnesota();
 
 %% Test spectral_layout.m
 tic;

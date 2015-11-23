@@ -51,13 +51,15 @@ V(:,1) = V(:,1)./norm(V(:,1), 2);
 epsilon = 1e-3;
 
 for i = 2:m+1
-    for j = 1:i
-        V(:,i) = V(:,i) - (V(:,i)' * D * V(:,j)) * V(:,j);
-    end
-    
+    % D-orthogonalize
+    V(:, i:end) = V(:, i:end) - ...
+        repmat((V(:, i:end)' * D * V(:, i - 1))', [n, 1]) .* ...
+        repmat(V(:, i - 1), [1, m + 2 - i]);
+
     if norm(V(:,i),2) < epsilon % A linearly dependent vector
         V(:,i) = zeros([n, 1]);
     else
+        % Normalize
         V(:,i) = V(:,i)./norm(V(:,i), 2);
     end
 end
