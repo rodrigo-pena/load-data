@@ -1,30 +1,38 @@
 function [G, x, b] = digg_graph(DIGG_DIR, id, directed, pinitial, pend)
-% Outputs a GSP Toolbox-compatible graph from the Digg 2009 dataset.
-%   Inputs:
+%DIGG_GRAPH outputs a GSPBox-compatible graph from the Digg 2009 dataset.
+%
+%   Usage:
+%       [G, x, b] = digg_graph(DIGG_DIR, id, directed, pinitial, pend)
+%
+%   Input:
 %       DIGG_DIR:   Directory where the mutual.mat, friend_date.mat, 
 %                   user_id.mat, friend_id.mat, vote_date.mat, 
 %                   voter_id.mat, and story_id.mat files are located.
-%       id:         ID of the Digg story to consider as signal on the 
-%                   graph. The ID is an integer between 1 (default) and 97.
-%       directed:   0(default) or 1: assemble and undirected 
-%                   graph, or a directed graph, respectively. 
-%       pinitial:   A number between 0 and 1 encoding the percentage of
+%       id:         An number in {1,...,97} representing the ID of the 
+%                   Digg story to consider as signal on the graph. 
+%                   (DEFAULT: 1).
+%       directed:   A number in {0, 1} indicating if the graph is 
+%                   undirected or directed, respectively. 
+%                   (DEFAULT: 0).
+%       pinitial:   A number in [0, 1] encoding the percentage of
 %                   timesteps for the story to consider when determining 
 %                   the original voters for this story. If set to 0, only 
 %                   the very first recorded vote is considered as the 
 %                   original vote. The closer this number is to 1, more 
 %                   votes are considered as original votes.
-%       pend:       A number between 0 and 1 encoding the percentage of
+%                   (DEFAULT: 0.0).
+%       pend:       A number in [0, 1] encoding the percentage of
 %                   timesteps for the story to consider when determining 
 %                   the end of the information diffusion. If set to 0, then 
 %                   b = x, and we don't observe the diffusion. If set to 1, 
 %                   all the recorded timeteps for the story are considered,
 %                   and b encodes all the votes observed until the end of 
 %                   the recording for such story.
+%                   (DEFAULT: 0.0).
 %
-%   Outputs:
-%       G:          A GSP Toolbox-compatible graph assembled from
-%                   user friendship information.
+%   Output:
+%       G:          A GSPBox-compatible graph assembled from user 
+%                   friendship information.
 %       x:          A vector with ones on the indices corresponding to the
 %                   first voters of the Digg story being considered.
 %       b:          A vector with ones on the indices corresponding to the
