@@ -19,7 +19,7 @@ function G = delaunay_graph(varargin)
 %   Example:
 %       G = delaunay_graph(200, 2);
 %
-%   Requires:
+%   Requires: GSPBox (https://lts2.epfl.ch/gsp/)
 %
 % Author: Rodrigo Pena (rodrigo.pena@epfl.ch)
 % Date: 06 Jan 2016
