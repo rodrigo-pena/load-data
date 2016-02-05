@@ -32,36 +32,32 @@ end
 assert(isa(SNOW_GIS_DIR, 'char'), ...
     'SNOW_GIS_DIR must be a string');
 
+%% Initialization
+gsp_reset_seed(10); % Set the seed for random processes
+
 %% Load Soho map
 [soho, cmap, R] = geotiffread([SNOW_GIS_DIR, 'OSMap.tif']);
 [soho_gs, cmap_gs] = geotiffread([SNOW_GIS_DIR, 'OSMap_Grayscale.tif']);
-% info = geotiffinfo([SNOW_GIS_DIR, 'OSMap.tif']);
-% mapshow(soho, cmap, R);
-% xlabel('(m)')
-% ylabel('(m)')
 
-%% Compute world coordinates of the pixels on the map
+%% Compute a road mask
+road_mask = (soho ~= 204);
+crop_mask = false(size(road_mask));
+crop_mask(143:885, 335:1064) = true;
+road_mask = road_mask .* crop_mask;
+road_mask = bwmorph(road_mask, 'close', Inf);
+road_mask = bwmorph(road_mask, 'skel', Inf);
+road_mask = bwmorph(road_mask, 'spur', 20);
+road_mask = bwmorph(road_mask, 'clean');
+endp = bwmorph(road_mask, 'endpoints');
+branchp = bwmorph(road_mask, 'branchpoints');
+road_mask = road_mask.*(rand(size(road_mask)) < 0.25) | endp | branchp;
+
+%% Compute world coordinates and pick the points defined by the road mask
 [X, Y] = pixel2world(1:R.RasterExtentInWorldX, 1:R.RasterExtentInWorldY, R); 
 
 % Plane coordinates as complex numbers
 coords_map = repmat(X, [R.RasterExtentInWorldY, 1]) + ...
     1i.*repmat(Y', [1, R.RasterExtentInWorldX]);
-
-%% Get road mask & apply it to world coordinates
-road_mask = (soho ~= 204);
-road_mask = bwmorph(road_mask, 'close', Inf);
-road_mask = bwmorph(road_mask, 'skel', Inf);
-road_mask = bwmorph(road_mask, 'spur', 20);
-road_mask = bwmorph(road_mask, 'clean');
-
-% figure; 
-% image(soho);
-% colormap(cmap)
-% hold on
-% h = image(3*double(road_mask));
-% set(h, 'AlphaData', road_mask);
-% hold off
-
 coords_map = coords_map .* road_mask;
 coords_map = coords_map(:);
 coords_map = coords_map(coords_map(:) ~= 0);
@@ -70,38 +66,53 @@ nb_pts_map = size(coords_map, 1);
 
 %% Load cholera deaths info
 cholera_deaths = shaperead([SNOW_GIS_DIR, 'Cholera_Deaths.shp']);
-% mapshow(cholera_deaths);
-
 coords_chol = [ [cholera_deaths.X]' , [cholera_deaths.Y]' ];
 nb_pts_chol = length(cholera_deaths);
 death_count = [cholera_deaths.Count]';
 
 %% Load pump info
 pumps = shaperead([SNOW_GIS_DIR, 'Pumps.shp']);
-% mapshow(pumps);
-
 coords_pump = [ [pumps.X]' , [pumps.Y]' ];
 nb_pts_pump = length(pumps);
 
 %% Assemble graph
 coords = [coords_map; coords_chol; coords_pump];
-param = struct('type', 'knn', 'use_flann', 1, 'k', 10);
+nb_pts = nb_pts_map + nb_pts_chol + nb_pts_pump;
+
+% Treat differently the weighting of the edges on the road and the egdes
+% from death points
+param = struct('type', 'knn', 'use_flann', 0, 'k', 5);
+G_standard = gsp_nn_graph(coords, param);
+
+% Change sigma of the exponential kernel based on in the subgraph
+% containing the death points (and the egdes in the frontier)
+[spi, spj, dist] = gsp_nn_distanz(coords', coords', param);
+param.sigma = mean(dist((spi > nb_pts_map) | (spj > nb_pts_map)).^2);
+
+% Merge the two graphs
 G = gsp_nn_graph(coords, param);
-W = 0.*G.W;
-W(G.W > 1e-1) = G.W(G.W > 1e-1);
-G.W = W;
+G.W(1:nb_pts_map, 1:nb_pts_map) = G_standard.W(1:nb_pts_map, 1:nb_pts_map);
+
 G = gsp_graph_default_parameters(G);
+
+%% Retain only the biggest connected component
+[G_components, node_indexes] = connected_subgraphs(G);
+G = G_components{1};
+nodes = node_indexes{1};
 
 %% Generate signal vectors
 % Infected pump
-x = zeros(G.N, 1);
-x(nb_pts_map + nb_pts_chol + 1) = 1; 
+x = zeros(nb_pts, 1);
+x(nb_pts_map + nb_pts_chol + 1) = 1;
+x = x(nodes);
 
 % Observed death count
-b = zeros(G.N, 1);
+b = zeros(nb_pts, 1);
 b((nb_pts_map + 1):(nb_pts_map + nb_pts_chol)) = death_count;
+b = b(nodes);
 
-%% Plot signals on the graph
+%% Display graph & signals
+% TODO: make function to plot the graph on the map.
 [XG, YG] = world2pixel(G.coords(:,1), G.coords(:,2), R);
 
 cmap_gs(217:232, :) = colormap(jet(16));
@@ -109,12 +120,40 @@ cmap_gs(217:232, :) = colormap(jet(16));
 image(soho_gs);
 colormap(cmap_gs)
 hold on
+scatter(XG, YG, 200, cmap_gs(15*x + 217, :), '.');
+hold off
+
+figure
+image(soho_gs);
+colormap(cmap_gs)
+hold on
 scatter(XG, YG, 200, cmap_gs(b + 217, :), '.');
 hold off
 
+nnz(b)
+length(b(nodes>nb_pts_map+nb_pts_chol))
+
+figure
+mapshow(soho, cmap, R);
+xlabel('(m)')
+ylabel('(m)')
+mapshow(cholera_deaths);
+
+figure
+mapshow(soho, cmap, R);
+xlabel('(m)')
+ylabel('(m)')
+mapshow(pumps);
+
+%% Cleanup
+rng default
+
 end
 
+%% Auxiliary functions
+
 function [Xw, Yw] = pixel2world(Xp, Yp, R)
+%Converts pixel coordinates to world coordinates
     Xconv = sum(R.XIntrinsicLimits)./R.RasterExtentInWorldX;
     Xw = R.XWorldLimits(1) + (Xconv.*(Xp - 1) + R.XIntrinsicLimits(1)).*...
         diff(R.XWorldLimits)./R.RasterExtentInWorldX;
@@ -125,6 +164,7 @@ function [Xw, Yw] = pixel2world(Xp, Yp, R)
 end
 
 function [Xp, Yp] = world2pixel(Xw, Yw, R)
+%Converts world coordinates to pixel coordinates
     Xconv = sum(R.XIntrinsicLimits)./R.RasterExtentInWorldX;
     Xp = ( ( (Xw - R.XWorldLimits(1)) .* R.RasterExtentInWorldX ./ diff(R.XWorldLimits) ) - ...
         R.XIntrinsicLimits(1) )./Xconv + 1;
