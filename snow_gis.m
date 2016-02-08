@@ -29,15 +29,13 @@ function [G, x, b] = snow_gis(SNOW_GIS_DIR)
 if nargin < 1 || isempty(SNOW_GIS_DIR)
     SNOW_GIS_DIR = '~/data/snow_gis/';
 end
-assert(isa(SNOW_GIS_DIR, 'char'), ...
-    'SNOW_GIS_DIR must be a string');
+assert(isa(SNOW_GIS_DIR, 'char'), 'SNOW_GIS_DIR must be a string');
 
 %% Initialization
 gsp_reset_seed(10); % Set the seed for random processes
 
 %% Load Soho map
-[soho, cmap, R] = geotiffread([SNOW_GIS_DIR, 'OSMap.tif']);
-[soho_gs, cmap_gs] = geotiffread([SNOW_GIS_DIR, 'OSMap_Grayscale.tif']);
+[soho, ~, R] = geotiffread([SNOW_GIS_DIR, 'OSMap.tif']);
 
 %% Compute a road mask
 road_mask = (soho ~= 204);
@@ -75,24 +73,38 @@ pumps = shaperead([SNOW_GIS_DIR, 'Pumps.shp']);
 coords_pump = [ [pumps.X]' , [pumps.Y]' ];
 nb_pts_pump = length(pumps);
 
-%% Assemble graph
+%% Assemble k-NN graph
 coords = [coords_map; coords_chol; coords_pump];
 nb_pts = nb_pts_map + nb_pts_chol + nb_pts_pump;
 
+param = struct('type', 'knn', 'use_flann', 0, 'k', 6, 'center', 0, ...
+    'rescale', 0, 'epsilon', 0.01, 'use_l1', 0, 'target_degree', 0, ...
+    'symmetrize_type', 'average', 'light', 0);
+
+[spi, spj, dist] = gsp_nn_distanz(coords', coords', param);
+Dist = sparse(spi, spj, dist, nb_pts, nb_pts);
+Dist = gsp_symmetrize(Dist, param.symmetrize_type);
+
 % Treat differently the weighting of the edges on the road and the egdes
 % from death points
-param = struct('type', 'knn', 'use_flann', 0, 'k', 5);
-G_standard = gsp_nn_graph(coords, param);
+sigma_roads = mean(dist)^2;
+W_roads = sparse(spi, spj, double(exp(-dist.^2/sigma_roads)), nb_pts, nb_pts);
+W_roads(1:(nb_pts + 1):end) = 0;  % Remove values in the main diagonal
+W_roads = gsp_symmetrize(W_roads, param.symmetrize_type);
 
 % Change sigma of the exponential kernel based on in the subgraph
 % containing the death points (and the egdes in the frontier)
-[spi, spj, dist] = gsp_nn_distanz(coords', coords', param);
-param.sigma = mean(dist((spi > nb_pts_map) | (spj > nb_pts_map)).^2);
+d_nr = tril(Dist);
+d_nr = d_nr(nb_pts_map + 1:end, :);
+sigma_non_roads = max(mean(d_nr(d_nr ~= 0).^2, 2));
+W_non_roads = sparse(spi, spj, double(exp(-dist.^2/sigma_non_roads)), nb_pts, nb_pts);
+W_non_roads(1:(nb_pts + 1):end) = 0;  % Remove values in the main diagonal
+W_non_roads = gsp_symmetrize(W_non_roads, param.symmetrize_type);
 
 % Merge the two graphs
-G = gsp_nn_graph(coords, param);
-G.W(1:nb_pts_map, 1:nb_pts_map) = G_standard.W(1:nb_pts_map, 1:nb_pts_map);
-
+G = struct('N', nb_pts, 'W', W_non_roads, 'coords', coords, ...
+    'type', 'nearest neighbors', 'sigma', [sigma_roads, sigma_non_roads]);
+G.W(1:nb_pts_map, 1:nb_pts_map) = W_roads(1:nb_pts_map, 1:nb_pts_map);
 G = gsp_graph_default_parameters(G);
 
 %% Retain only the biggest connected component
@@ -110,40 +122,6 @@ x = x(nodes);
 b = zeros(nb_pts, 1);
 b((nb_pts_map + 1):(nb_pts_map + nb_pts_chol)) = death_count;
 b = b(nodes);
-
-%% Display graph & signals
-% TODO: make function to plot the graph on the map.
-[XG, YG] = world2pixel(G.coords(:,1), G.coords(:,2), R);
-
-cmap_gs(217:232, :) = colormap(jet(16));
-
-image(soho_gs);
-colormap(cmap_gs)
-hold on
-scatter(XG, YG, 200, cmap_gs(15*x + 217, :), '.');
-hold off
-
-figure
-image(soho_gs);
-colormap(cmap_gs)
-hold on
-scatter(XG, YG, 200, cmap_gs(b + 217, :), '.');
-hold off
-
-nnz(b)
-length(b(nodes>nb_pts_map+nb_pts_chol))
-
-figure
-mapshow(soho, cmap, R);
-xlabel('(m)')
-ylabel('(m)')
-mapshow(cholera_deaths);
-
-figure
-mapshow(soho, cmap, R);
-xlabel('(m)')
-ylabel('(m)')
-mapshow(pumps);
 
 %% Cleanup
 rng default
