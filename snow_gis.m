@@ -1,9 +1,9 @@
-function [G, x, b] = snow_gis(SNOW_GIS_DIR)
+function [G, x, b, M] = snow_gis(SNOW_GIS_DIR)
 %SNOW_GIS creates a GSPBox-compatible graph from GIS gathered by John Snow
 %about a cholera outbreak in Soho, London, in the 19th century
 %
 %   Usage:
-%       [G, x, b] = snow_gis(SNOW_GIS_DIR)
+%       [G, x, b, M] = snow_gis(SNOW_GIS_DIR)
 %
 %   Input:
 %       SNOW_GIS_DIR    : A string specifying the directory where the GIS
@@ -12,8 +12,12 @@ function [G, x, b] = snow_gis(SNOW_GIS_DIR)
 %
 %   Output:
 %       G   : A Matlab structure encoding graph information.
-%       x   : A vector with the locations of the original cholera deaths.
-%       b   : A vector with the final accounts of cholera deaths.
+%       x   : A vector with non-zero entry at the location of the infected
+%             water pump.
+%       b   : A vector with whose entries represent the observed death 
+%             count by cholera at each point.
+%       M   : A diagonal matrix encoding the observation mask (nodes where 
+%             the deaths were observed)
 %
 %   Example:
 %       G = snow_gis();
@@ -111,6 +115,11 @@ G = gsp_graph_default_parameters(G);
 [G_components, node_indexes] = connected_subgraphs(G);
 G = G_components{1};
 nodes = node_indexes{1};
+Dist = Dist(nodes, nodes);
+G.Dist = Dist;
+G.idx_road = find(nodes <= nb_pts_map);
+G.idx_cholera = find((nodes > nb_pts_map)&(nodes <= nb_pts - nb_pts_pump));
+G.idx_pump = find((nodes > nb_pts - nb_pts_pump));
 
 %% Generate signal vectors
 % Infected pump
@@ -122,6 +131,10 @@ x = x(nodes);
 b = zeros(nb_pts, 1);
 b((nb_pts_map + 1):(nb_pts_map + nb_pts_chol)) = death_count;
 b = b(nodes);
+
+% Observation mask
+M = speye(G.N);
+M(b==0, b==0) = 0;
 
 %% Cleanup
 rng default
@@ -139,17 +152,4 @@ function [Xw, Yw] = pixel2world(Xp, Yp, R)
     Yconv = sum(R.YIntrinsicLimits)./R.RasterExtentInWorldY;
     Yw = R.YWorldLimits(1) + (Yconv.*(R.RasterExtentInWorldY - Yp) + R.YIntrinsicLimits(1)).*...
         diff(R.YWorldLimits)./R.RasterExtentInWorldY;
-end
-
-function [Xp, Yp] = world2pixel(Xw, Yw, R)
-%Converts world coordinates to pixel coordinates
-    Xconv = sum(R.XIntrinsicLimits)./R.RasterExtentInWorldX;
-    Xp = ( ( (Xw - R.XWorldLimits(1)) .* R.RasterExtentInWorldX ./ diff(R.XWorldLimits) ) - ...
-        R.XIntrinsicLimits(1) )./Xconv + 1;
-    Xp = floor(Xp);
-    
-    Yconv = sum(R.YIntrinsicLimits)./R.RasterExtentInWorldY;
-    Yp = -( ( (Yw - R.YWorldLimits(1)) .* R.RasterExtentInWorldY ./ diff(R.YWorldLimits) ) - ...
-        R.YIntrinsicLimits(1) )./Yconv + R.RasterExtentInWorldY;
-    Yp = floor(Yp);
 end
