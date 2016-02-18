@@ -63,19 +63,30 @@ W = sparse(spi, spj, double(exp(-dist.^2/sigma)), N_red, N_red);
 W(1:(N_red + 1):end) = 0;  % Remove values in the main diagonal
 W = gsp_symmetrize(W, 'average');
 
-%% Update Graph structure
+%% Create Graph structure
 G_red = struct( 'N', N_red, ...
                 'W', W, ...
                 'coords', G.coords(idx_non_road, :), ...
-                'type', 'nearest neighbors', ...
-                'sigma', sigma, ...
-                'Dist', Dist_red, ...
-                'idx_cholera', 1:length(G.idx_cholera), ...
-                'idx_pump', (N_red - length(G.idx_cholera)):N_red);
+                'type', 'nearest neighbors');
+
+%% Retain only the main connected component
+[G_cell, node_cell] = connected_subgraphs(G_red);
+G_red = G_cell{1};
+nodes = node_cell{1};
+
+%% Update Graph structure
+G_red.sigma = sigma;
+G_red.Dist = Dist_red(nodes, nodes);
+G_red.idx_cholera = nodes(nodes <= length(G.idx_cholera));
+G_red.idx_cholera = 1:length(G_red.idx_cholera);
+G_red.idx_pump = nodes(nodes > length(G.idx_cholera));
+G_red.idx_pump = (length(G_red.idx_cholera) + 1):G_red.N;
 G_red = gsp_graph_default_parameters(G_red);
 
 %% Update signals
 x_red = x(idx_non_road);
+x_red = x_red(nodes);
 b_red = b(idx_non_road);
+b_red = b_red(nodes);
 
 end

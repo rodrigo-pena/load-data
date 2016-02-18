@@ -133,8 +133,7 @@ b((nb_pts_map + 1):(nb_pts_map + nb_pts_chol)) = death_count;
 b = b(nodes);
 
 % Observation mask
-M = speye(G.N);
-M(b==0, b==0) = 0;
+M = double(b ~= 0);
 
 %% Cleanup
 rng default
