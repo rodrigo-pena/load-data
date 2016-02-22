@@ -1,4 +1,4 @@
-function [G, x, b, M] = snow_gis(SNOW_GIS_DIR)
+function [G, x, b, M] = snow_gis(SNOW_GIS_DIR, downsample)
 %SNOW_GIS creates a GSPBox-compatible graph from GIS gathered by John Snow
 %about a cholera outbreak in Soho, London, in the 19th century
 %
@@ -9,6 +9,9 @@ function [G, x, b, M] = snow_gis(SNOW_GIS_DIR)
 %       SNOW_GIS_DIR    : A string specifying the directory where the GIS
 %                       dataset is located (see reference below).
 %                       (DEFAULT: '~/data/snow_gis/');
+%       downsample      : (Optional) A number in [0, 1]. Percentage of 
+%                         points in the road to keep.
+%                         (DEFAULT: 0.1)
 %
 %   Output:
 %       G   : A Matlab structure encoding graph information.
@@ -21,6 +24,8 @@ function [G, x, b, M] = snow_gis(SNOW_GIS_DIR)
 %
 %   Example:
 %       G = snow_gis();
+%
+%   See also: snow_gis_reduce.m
 %
 %   Requires: GSPBox (https://lts2.epfl.ch/gsp/)
 %
@@ -35,8 +40,15 @@ if nargin < 1 || isempty(SNOW_GIS_DIR)
 end
 assert(isa(SNOW_GIS_DIR, 'char'), 'SNOW_GIS_DIR must be a string');
 
+if nargin < 2 || isempty(downsample)
+    downsample = 0.1;
+end
+assert(isnumeric(downsample), 'downsample must be a number');
+assert((downsample >= 0) && (downsample <= 1), ...
+    'downsample must be between 0 and 1');
+
 %% Initialization
-gsp_reset_seed(10); % Set the seed for random processes
+gsp_reset_seed(2); % Set the seed for random processes
 
 %% Load Soho map
 [soho, ~, R] = geotiffread([SNOW_GIS_DIR, 'OSMap.tif']);
@@ -52,7 +64,7 @@ road_mask = bwmorph(road_mask, 'spur', 20);
 road_mask = bwmorph(road_mask, 'clean');
 endp = bwmorph(road_mask, 'endpoints');
 branchp = bwmorph(road_mask, 'branchpoints');
-road_mask = road_mask.*(rand(size(road_mask)) < 0.25) | endp | branchp;
+road_mask = road_mask.*(rand(size(road_mask)) < downsample) | endp | branchp;
 
 %% Compute world coordinates and pick the points defined by the road mask
 [X, Y] = pixel2world(1:R.RasterExtentInWorldX, 1:R.RasterExtentInWorldY, R); 
@@ -120,6 +132,7 @@ G.Dist = Dist;
 G.idx_road = find(nodes <= nb_pts_map);
 G.idx_cholera = find((nodes > nb_pts_map)&(nodes <= nb_pts - nb_pts_pump));
 G.idx_pump = find((nodes > nb_pts - nb_pts_pump));
+G.data_source = 'snow_gis';
 
 %% Generate signal vectors
 % Infected pump
