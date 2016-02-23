@@ -32,14 +32,13 @@ assert(isfield(G, 'N') && isfield(G, 'W'), ...
 G_cell = cell(1);
 node_cell = cell(1);
 
-%% Dulmage-Mendelsohn permutation
-[p, ~, r, ~] = dmperm(G.W);
-n_conn_components = length(r) - 1;
+%% Find connected componnents
+[n_conn_components, labels] = graphconncomp(G.W);
 node_count = zeros(1, n_conn_components);
 
 %% Assemble each subgraph structure
 for i = 1:n_conn_components
-    nodes = sort(p(r(i):r(i+1)-1));
+    nodes = find(labels == i);
     if ~isempty(nodes)
         node_cell{i} = nodes;
         node_count(i) = length(nodes);
