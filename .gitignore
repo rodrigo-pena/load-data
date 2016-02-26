@@ -1,4 +1,5 @@
 *.csv
 *.m~
+*.avi
 .DS_Store
 /spectral-layout/figs

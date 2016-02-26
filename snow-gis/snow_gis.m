@@ -1,4 +1,4 @@
-function [G, x, b, M] = snow_gis(SNOW_GIS_DIR, downsample)
+function [G, x, b, M] = snow_gis(SNOW_GIS_DIR, downsample, neighbors)
 %SNOW_GIS creates a GSPBox-compatible graph from GIS gathered by John Snow
 %about a cholera outbreak in Soho, London, in the 19th century
 %
@@ -9,9 +9,13 @@ function [G, x, b, M] = snow_gis(SNOW_GIS_DIR, downsample)
 %       SNOW_GIS_DIR    : A string specifying the directory where the GIS
 %                       dataset is located (see reference below).
 %                       (DEFAULT: '~/data/snow_gis/');
-%       downsample      : (Optional) A number in [0, 1]. Percentage of 
-%                         points in the road to keep.
-%                         (DEFAULT: 0.1)
+%       downsample      : (Optional) A power of 2 (greater or equal to 1). 
+%                         Factor by which we downsample the points in the
+%                         road.
+%                         (DEFAULT: 1)
+%       neighbors       : (Optional) A number in [1, G.N]. Number of 
+%                         neighbors of each node in the graph.
+%                         (DEFAULT: 6)
 %
 %   Output:
 %       G   : A Matlab structure encoding graph information.
@@ -19,7 +23,7 @@ function [G, x, b, M] = snow_gis(SNOW_GIS_DIR, downsample)
 %             water pump.
 %       b   : A vector with whose entries represent the observed death 
 %             count by cholera at each point.
-%       M   : A diagonal matrix encoding the observation mask (nodes where 
+%       M   : A vector encoding the observation mask (nodes where 
 %             the deaths were observed)
 %
 %   Example:
@@ -41,30 +45,47 @@ end
 assert(isa(SNOW_GIS_DIR, 'char'), 'SNOW_GIS_DIR must be a string');
 
 if nargin < 2 || isempty(downsample)
-    downsample = 0.1;
+    downsample = 1;
 end
 assert(isnumeric(downsample), 'downsample must be a number');
-assert((downsample >= 0) && (downsample <= 1), ...
-    'downsample must be between 0 and 1');
+assert(downsample >= 1, 'downsample greater or equal to 1');
+downsample = 2.^nextpow2(downsample);
 
-%% Initialization
-gsp_reset_seed(2); % Set the seed for random processes
+if nargin < 3 || isempty(neighbors); neighbors = 6; end
+assert((neighbors >= 2), 'neighbors must be greater or equal to 2');
 
 %% Load Soho map
 [soho, ~, R] = geotiffread([SNOW_GIS_DIR, 'OSMap.tif']);
 
 %% Compute a road mask
+% Segment non-buildings
 road_mask = (soho ~= 204);
+
+% Crop mask to the area where the pumps and deaths are
 crop_mask = false(size(road_mask));
 crop_mask(143:885, 335:1064) = true;
 road_mask = road_mask .* crop_mask;
+
+% Compute skeleton of the road
 road_mask = bwmorph(road_mask, 'close', Inf);
 road_mask = bwmorph(road_mask, 'skel', Inf);
 road_mask = bwmorph(road_mask, 'spur', 20);
 road_mask = bwmorph(road_mask, 'clean');
-endp = bwmorph(road_mask, 'endpoints');
-branchp = bwmorph(road_mask, 'branchpoints');
-road_mask = road_mask.*(rand(size(road_mask)) < downsample) | endp | branchp;
+
+% Old way:
+% endp = bwmorph(road_mask, 'endpoints');
+% branchp = bwmorph(road_mask, 'branchpoints');
+% road_mask = road_mask.*(rand(size(road_mask)) < downsample) | endp | branchp;
+
+% Downsample points
+[r, c] = size(road_mask);
+while downsample > 1
+    down_mask = checkerboard(downsample/2, ...
+        ceil(r/downsample), ceil(c/downsample));
+    down_mask = (down_mask(1:r, 1:c) > 0.5); % Turn to logical
+    road_mask = road_mask .* down_mask;
+    downsample = downsample / 2;
+end
 
 %% Compute world coordinates and pick the points defined by the road mask
 [X, Y] = pixel2world(1:R.RasterExtentInWorldX, 1:R.RasterExtentInWorldY, R); 
@@ -93,8 +114,9 @@ nb_pts_pump = length(pumps);
 coords = [coords_map; coords_chol; coords_pump];
 nb_pts = nb_pts_map + nb_pts_chol + nb_pts_pump;
 
-param = struct('type', 'knn', 'use_flann', 0, 'k', 6, 'center', 0, ...
-    'rescale', 0, 'epsilon', 0.01, 'use_l1', 0, 'target_degree', 0, ...
+param = struct('type', 'knn', 'use_flann', 0, ...
+    'k', min(neighbors, nb_pts - 1), 'center', 0, 'rescale', 0, ...
+    'epsilon', 0.01, 'use_l1', 0, 'target_degree', 0, ...
     'symmetrize_type', 'average', 'light', 0);
 
 [spi, spj, dist] = gsp_nn_distanz(coords', coords', param);
@@ -129,6 +151,7 @@ G = G_components{1};
 nodes = node_indexes{1};
 Dist = Dist(nodes, nodes);
 G.Dist = Dist;
+G.sigma = [sigma_roads, sigma_non_roads];
 G.idx_road = find(nodes <= nb_pts_map);
 G.idx_cholera = find((nodes > nb_pts_map)&(nodes <= nb_pts - nb_pts_pump));
 G.idx_pump = find((nodes > nb_pts - nb_pts_pump));
