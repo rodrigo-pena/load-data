@@ -64,15 +64,15 @@ switch release
         ETEX_DIR = [ETEX_DIR, 'release-2/'];
         
         % Quality flags file path
-        quality_file_path = [ETEX_DIR, 'pmch.codv1.2'];
+        quality_file_path = [ETEX_DIR, 'pmcp.codv1.2'];
         
         % PMCH concentration file path
-        concentration_file_path = [ETEX_DIR, 'pmch.datv1.2'];
+        concentration_file_path = [ETEX_DIR, 'pmcp.datv1.2'];
 end
 
 % Read quality flags file
 fid = fopen(quality_file_path, 'r');
-assert(fid ~= -1, 'File pmch.cod could not be opened');
+assert(fid ~= -1, ['File ', quality_file_path, ' could not be opened']);
 header_lines = textscan(fid, '%s', 2, 'delimiter', '\n');
 cols = textscan(header_lines{1}{2}, '%d');
 num_cols = length(cols{1});
@@ -84,7 +84,7 @@ fclose(fid);
 
 % Read PMCH concentration file
 fid = fopen(concentration_file_path, 'r');
-assert(fid ~= -1, 'File pmch.dat could not be opened');
+assert(fid ~= -1, ['File ', concentration_file_path, ' could not be opened']);
 header_lines = textscan(fid, '%s', 2, 'delimiter', '\n');
 cols = textscan(header_lines{1}{2}, '%d');
 num_cols = length(cols{1});

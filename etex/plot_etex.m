@@ -6,7 +6,7 @@ function plot_etex(G, x)
 %
 %   Input:
 %       G   : A Matlab structure encoding graph information.
-%       x   : The signal on the graph.
+%       x   : A G.N-by-1 vector representing the signal on the graph.
 %
 %   Output:
 %
@@ -14,10 +14,11 @@ function plot_etex(G, x)
 %       [G, B] = etex_graph();
 %       plot_snow_gis(G, B(:, 15));
 %
-%   Requires:
+%   Requires:  Files ne_110m_land.* on path (see reference below for 
+%              the download link)
 %
 %   Reference: https://rem.jrc.ec.europa.eu/RemWeb/etex/
-%              http://www.arcgis.com/home/item.html?id=6d611f8d87d54227b494d4c3becef6a0
+%              http://www.naturalearthdata.com/downloads/
 %
 % Author: Rodrigo Pena (rodrigo.pena@epfl.ch)
 % Date: 2 Mar 2016
@@ -28,9 +29,8 @@ assert(isfield(G, 'N'), 'G.N doens''t exist');
 assert(sum(size(x) ~= [G.N, 1]) == 0, 'x must be a G.N-by-1 vector');
 
 %% Initialization
-% TODO: Check if there's a better shapefile online
-% Read Europe map shape file 
-S = shaperead('MyEurope.shp'); 
+% Read World Map shape file 
+S = shaperead('ne_110m_land.shp'); 
 
 % Define colormap
 cmap = jet(256);
@@ -51,7 +51,7 @@ if isfield(G, 'idx_release_site')
         100, 'r', 'o');
 end
 hold off
-axis([-11, 30, 35, 70]);
+axis([-11, 30, 35, 70]); % Focus on Europe
 axis off
 h = colorbar;
 set(h, 'TickLabels', linspace(min(x), max(x), length(h.Ticks))');
