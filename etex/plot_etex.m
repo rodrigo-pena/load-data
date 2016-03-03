@@ -40,13 +40,14 @@ color  = (x - min(x))./(max(x) - min(x));
 color = floor(255.*color + 1);
 
 %% Display graph & signals
+clf(gcf); % To avoid having mapshow add another layer to the current plot
 mapshow(S, 'FaceColor', [1 1 1], 'EdgeColor', 'black')
 colormap(cmap)
 hold on
-scatter3(G.coords(:,1), G.coords(:,2), color, 200, cmap(color, :), '.');
+scatter3(G.coords(:,1), G.coords(:,2), color./10, 200, cmap(color, :), '.');
 if isfield(G, 'idx_release_site')
     scatter3(G.coords(G.idx_release_site, 1), ...
-        G.coords(G.idx_release_site, 2), color(G.idx_release_site), ...
+        G.coords(G.idx_release_site, 2), color(G.idx_release_site)./10, ...
         100, 'r', 'o');
 end
 hold off
@@ -55,6 +56,5 @@ axis off
 h = colorbar;
 set(h, 'TickLabels', linspace(min(x), max(x), length(h.Ticks))');
 set(get(h,'Title'),'String','PMCH ng/m^3');
-%TODO: find a way to refresh the plot when we call plot_etex successively
 
 end
