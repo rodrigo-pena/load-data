@@ -36,20 +36,34 @@ S = shaperead('ne_110m_land.shp');
 cmap = jet(256);
 
 % Normalize of color (signal) for plotting
-color  = (x - min(x))./(max(x) - min(x)); 
+if nnz(x) > 0
+    color  = (x - min(x))./(max(x) - min(x));
+else
+    color = x;
+end
 color = floor(255.*color + 1);
+
+% Set edge color
+G.plotting.edge_color = [0.6 0.6 0.6];
 
 %% Display graph & signals
 clf(gcf); % To avoid having mapshow add another layer to the current plot
+
 mapshow(S, 'FaceColor', [1 1 1], 'EdgeColor', 'black')
 colormap(cmap)
 hold on
+
 scatter3(G.coords(:,1), G.coords(:,2), color./10, 200, cmap(color, :), '.');
 if isfield(G, 'idx_release_site')
     scatter3(G.coords(G.idx_release_site, 1), ...
         G.coords(G.idx_release_site, 2), color(G.idx_release_site)./10, ...
         100, 'r', 'o');
 end
+
+if G.Ne <= 1000
+    gsp_plot_edges(G);
+end
+
 hold off
 axis([-11, 30, 35, 70]); % Focus on Europe
 axis off

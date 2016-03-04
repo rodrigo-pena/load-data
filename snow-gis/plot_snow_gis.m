@@ -39,21 +39,36 @@ max_c = 256;
 cmap_gs(min_c:max_c, :) = colormap(jet(max_c - min_c + 1));
 
 % Normalization for plotting
-color  = (x - min(x))./(max(x) - min(x)); 
+if nnz(x) > 0
+    color  = (x - min(x))./(max(x) - min(x));
+else
+    color = x;
+end
 color = floor((max_c - min_c - 1).*color + min_c);
 
 % Pixel coordinates of points in the map
 [XG, YG] = world2pixel(G.coords(:,1), G.coords(:,2), R);
 
+% Set edge color
+G.plotting.edge_color = [0.1 0.1 0.1];
+
 %% Display graph & signals
 image(soho);
 colormap(cmap_gs)
 hold on
+
 scatter3(XG, YG, color - min_c, 200, cmap_gs(color, :), '.');
 if isfield(G, 'idx_pump')
     scatter3(XG(G.idx_pump), YG(G.idx_pump), color(G.idx_pump) - min_c, 100, 'r', 'o');
 end
+
+if G.Ne <= 1000
+    G.coords = [XG, YG];
+    gsp_plot_edges(G);
+end
+
 hold off
+axis([min(XG) - 45, max(XG) + 45, min(YG) - 45, max(YG) + 45]);
 axis off
 h = colorbar;
 set(h, 'Limits', [min_c, max_c])
