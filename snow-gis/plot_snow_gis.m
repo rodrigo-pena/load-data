@@ -57,7 +57,7 @@ image(soho);
 colormap(cmap_gs)
 hold on
 
-scatter3(XG, YG, color - min_c, 200, cmap_gs(color, :), '.');
+scatter3(XG, YG, color - min_c, 500, cmap_gs(color, :), '.');
 if isfield(G, 'idx_pump')
     scatter3(XG(G.idx_pump), YG(G.idx_pump), color(G.idx_pump) - min_c, 100, 'r', 'o');
 end
