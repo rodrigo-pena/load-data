@@ -53,7 +53,7 @@ mapshow(S, 'FaceColor', [1 1 1], 'EdgeColor', 'black')
 colormap(cmap)
 hold on
 
-scatter3(G.coords(:,1), G.coords(:,2), color./10, 200, cmap(color, :), '.');
+scatter3(G.coords(:,1), G.coords(:,2), color./10, 500, cmap(color, :), '.');
 if isfield(G, 'idx_release_site')
     scatter3(G.coords(G.idx_release_site, 1), ...
         G.coords(G.idx_release_site, 2), color(G.idx_release_site)./10, ...
