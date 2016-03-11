@@ -1,32 +1,35 @@
-function plot_etex(G, x)
-%PLOT_ETEX plots ETEX graph G and signal x on a European map
+function plot_chernobyl(G, x, unit)
+%PLOT_ETEX plots Chernobyl graph G and signal x on a European map
 %
 %   Usage:
-%       plot_etex(G, x)
+%       plot_chernobyl(G, x)
 %
 %   Input:
 %       G   : A Matlab structure encoding graph information.
 %       x   : A G.N-by-1 vector representing the signal on the graph.
+%       unit: (Optional) A string specifying the unit of measurement of the
+%             signal on the graph.
 %
 %   Output:
 %
 %   Example:
-%       [G, B] = etex_graph();
-%       plot_etex(G, B(:, 15));
+%       [G, measurements] = chernobyl();
+%       plot_chernobyl(G, measurements.Cs137_fallout);
 %
 %   Requires:  Files ne_110m_land.* on path (see reference below for 
 %              the download link)
 %
-%   Reference: https://rem.jrc.ec.europa.eu/RemWeb/etex/
+%   Reference: https://rem.jrc.ec.europa.eu/RemWeb/Browse.aspx?path=Chernobyl%20Data
 %              http://www.naturalearthdata.com/downloads/
 %
 % Author: Rodrigo Pena (rodrigo.pena@epfl.ch)
-% Date: 2 Mar 2016
+% Date: 11 Mar 2016
 
 %% Parse input
 assert(isfield(G, 'coords'), 'G.coords doens''t exist');
 assert(isfield(G, 'N'), 'G.N doens''t exist');
 assert(sum(size(x) ~= [G.N, 1]) == 0, 'x must be a G.N-by-1 vector');
+if nargin < 3; unit = []; end    
 
 %% Initialization
 % Read World Map shape file 
@@ -54,21 +57,17 @@ colormap(cmap)
 hold on
 
 scatter3(G.coords(:,1), G.coords(:,2), color./10, 500, cmap(color, :), '.');
-if isfield(G, 'idx_release_site')
-    scatter3(G.coords(G.idx_release_site, 1), ...
-        G.coords(G.idx_release_site, 2), color(G.idx_release_site)./10, ...
-        100, 'r', 'o');
-end
 
 if G.Ne <= 1000
     gsp_plot_edges(G);
 end
 
 hold off
-axis([-11, 30, 35, 70]); % Focus on Europe
+axis([-15, 40, 35, 75]); % Focus on Europe
 axis off
 h = colorbar;
 set(h, 'TickLabels', linspace(min(x), max(x), length(h.Ticks))');
-set(get(h,'Title'),'String','PMCH ng/m^3');
+if ~isempty(unit); set(get(h,'Title'),'String', unit); end
+set(gcf, 'Position', [500 500 960 720]);
 
 end

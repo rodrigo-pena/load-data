@@ -25,7 +25,7 @@ function [G, B, M] = etex_graph(ETEX_DIR, release, k)
 %   Example:
 %       [G, B, M] = etex_graph();
 %
-%   See also:
+%   See also: plot_etex.m
 %
 %   Requires: GSPBox (https://lts2.epfl.ch/gsp/)
 %
