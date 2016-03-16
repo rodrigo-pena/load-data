@@ -53,8 +53,9 @@ mapshow(S, 'FaceColor', [1 1 1], 'EdgeColor', 'black')
 colormap(cmap)
 hold on
 
-scatter3(G.coords(:,1), G.coords(:,2), color./10, 500, cmap(color, :), '.');
-if isfield(G, 'idx_release_site')
+scatter3(G.coords(:,1), G.coords(:,2), color./10, ...
+    G.plotting.vertex_size, cmap(color, :), '.');
+if isfield(G, 'idx_release_site') && ~isempty(G.idx_release_site)
     scatter3(G.coords(G.idx_release_site, 1), ...
         G.coords(G.idx_release_site, 2), color(G.idx_release_site)./10, ...
         100, 'r', 'o');
