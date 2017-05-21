@@ -19,7 +19,7 @@ TOL = 1e-8;
 MAX_ITER = 1000;
 
 %% Create graph
-G = gsp_minnesota();
+G = gsp_bunny();
 
 %% Test spectral_layout.m
 tic;
@@ -31,7 +31,7 @@ fprintf('Time to execute spectral_layout.m: %1.2f\n', t1);
 tic;
 G2 = spectral_layout_approx(G, p, m, method, TOL, MAX_ITER);
 t2 = toc;
-fprintf('Time to execute spectral_layout.m: %1.2f\n', t2);
+fprintf('Time to execute spectral_layout_approx.m: %1.2f\n', t2);
 
 %% Display figures
 figure();

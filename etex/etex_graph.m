@@ -118,7 +118,7 @@ G.station_labels = station_labels;
 G.station_names = station_names;
 G.alt = alt;
 G.data_source = 'etex';
-G.idx_release_site = find(strcmp(station_names, 'Rennes'));
+G.plotting.vertex_size = 2000;
 
 %% Generate signal matrices
 % Observation mask

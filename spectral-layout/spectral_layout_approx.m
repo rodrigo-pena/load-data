@@ -39,8 +39,10 @@ function [ G, U ] = spectral_layout_approx(G, p, m, method, TOL, MAX_ITER, ...
 %         subplot(121)
 %         gsp_plot_graph(G);
 %         title('Original Coordinates')
+%         G2 = spectral_layout_approx(G, 4, 100);
 %         subplot(122)
-%         G2 = spectral_layout_2(G, 3, [], [], 1);
+%         gsp_plot_graph(G2);
+%         title('Spectral Coordinates')
 %
 %   See also: spectral_layout.m
 %

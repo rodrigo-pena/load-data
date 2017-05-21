@@ -114,6 +114,7 @@ G.idx_pump = nodes(nodes > length(G_full.idx_cholera));
 G.idx_pump = (length(G_full.idx_cholera) + 1):G.N;
 G.data_source = 'snow_gis';
 G = gsp_graph_default_parameters(G);
+G.plotting.vertex_size = 1000;
 
 %% Update signals
 % Infected pump
