@@ -62,7 +62,7 @@ To get your local Snow GIS data folder to be properly visible to the functions, 
 
 [snow_link]: http://blog.rtwilson.com/john-snows-famous-cholera-analysis-data-in-modern-gis-formats/
 
-## spectral-layout
+## [spectral-layout](https://github.com/rodrigo-pena/load-data/tree/master/spectral-layout)
 Contains functions for drawing graphs with spectral-based layouts [1]. It does so by computing (or approximating) the eigenvectors of the graph Laplacian (L), or the generalized eigenvectors of (L,D), where D is the diagonal degree matrix of the graph.
 
 ### References
